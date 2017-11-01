@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tf import GraphKeys as GKeys
+from tensorflow import GraphKeys as GKeys
 
 import re
 import numpy as np
@@ -35,7 +35,7 @@ class Vizer:
               shape=[],
               sum_type=SummaryType.SCALAR,
               dtype=tf.float32,
-              kwargs):
+              kwargs={}):
     """Add placeholder and its summary op"""
     pld = tf.placeholder(tf.float32, shape)
     assert sum_type in SummaryType.keys(), \

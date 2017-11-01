@@ -1,5 +1,5 @@
 import tensorflow as tf
-from Models.SegNet.segnet_template import SegNet_Template
+from segnet_template import SegNet_Template
 
 
 class Simple_SegNet(SegNet_Template):
@@ -10,12 +10,12 @@ class Simple_SegNet(SegNet_Template):
                initer,
                vizer,
                save_dir):
-  SegNet_Template.__init__(self,
-                           config,
-                           dataset,
-                           initer,
-                           initer,
-                           save_dir)
+    SegNet_Template.__init__(self,
+                             config,
+                             dataset,
+                             initer,
+                             initer,
+                             save_dir)
 
 
   def build(self):
@@ -38,7 +38,7 @@ class Simple_SegNet(SegNet_Template):
                         self.fed.labels,
                         loss_weights)
     self.total_loss = self._total_loss(
-                        collections=[self.GKeys.LOSSES]
+                        collections=[self.GKeys.LOSSES],
                         name='total_loss')
 
     # Train op

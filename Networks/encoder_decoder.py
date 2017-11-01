@@ -5,7 +5,7 @@ from math import ceil
 
 # modules
 from NN_base.nn_base import NN_BASE
-from Initer import InitMethod
+from initer import InitMethod
 
 
 class ENCODER_DECODER(NN_BASE):
@@ -112,7 +112,7 @@ class ENCODER_DECODER(NN_BASE):
               ksize=(2, 2),
               stride=2,
               padding='SAME',
-              name):
+              name=None):
     return self._max_pool(inputT,
                           ksize,
                           stride,
@@ -125,7 +125,7 @@ class ENCODER_DECODER(NN_BASE):
               ksize=(2, 2),
               stride=2,
               padding='SAME',
-              name):
+              name=None):
     return self._avg_pool(inputT,
                           ksize,
                           stride,

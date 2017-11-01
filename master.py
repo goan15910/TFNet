@@ -7,12 +7,13 @@ import numpy as np
 from easydict import EasyDict as edict
 
 # modules
-from Dataset import d_table
-from Dataset.dataset import SET
-from Models import m_table
+from Datasets import dataset_table as d_table
+from Models import model_table as m_table
 from config import config
 from initer import Initer
 from vizer import Vizer
+
+from Datasets.dataset import SET
 
 
 MODE = edict()

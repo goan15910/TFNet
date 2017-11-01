@@ -4,7 +4,7 @@ import math
 from math import ceil
 
 # modules
-from nn_base import NN_BASE
+from NN_base.nn_base import NN_BASE
 
 
 class DETECTOR(NN_BASE):

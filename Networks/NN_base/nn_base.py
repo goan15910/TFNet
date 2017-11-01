@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tf import GraphKeys as GKeys
+from tensorflow import GraphKeys as GKeys
 
 import os, sys
 import numpy as np

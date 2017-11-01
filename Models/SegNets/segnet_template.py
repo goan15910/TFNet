@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 
 from Networks.encoder_decoder import ENCODER_DECODER
-from Dataset.dataset import SET
+from Datasets.dataset import SET
 from vizer import SummaryType
 from eval_hist import Eval_hist
 
@@ -134,7 +134,7 @@ class SegNet_Template(ENCODER_DECODER):
 
     # add summary
     if skey == SET.VAL:
-      assert train_step is not None,
+      assert train_step is not None, \
           "Assign train step when eval val-set"
       values = [self.eval_hist.mean_acc,
                 total_loss / n_examples,
