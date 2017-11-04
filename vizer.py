@@ -38,8 +38,7 @@ class Vizer:
               kwargs={}):
     """Add placeholder and its summary op"""
     pld = tf.placeholder(tf.float32, shape)
-    assert sum_type in SummaryType.keys(), \
-        "Invalid summary type {}".format(sum_type)
+    self._check_sum_type(sum_type)
     if sum_type == SummaryType.SCALAR:
       sum_op = tf.summary.scalar(name,
                                  pld,
@@ -114,7 +113,12 @@ class Vizer:
 
     for l in loss_list:
       avg_l = loss_avg.average(l)
-      tf.summary.scalar(l.op.name+'(raw)', l)
-      tf.summary.scalar(l.op.name+'(avg)', avg_l)
+      tf.summary.scalar(l.op.name+'_raw', l)
+      tf.summary.scalar(l.op.name+'_avg', avg_l)
 
     return loss_avg_op
+
+
+  def _check_sum_type(self, sum_type):
+    assert sum_type in SummaryType.values(), \
+        "Invalid summary type {}".format(sum_type)

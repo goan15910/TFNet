@@ -5,9 +5,11 @@ import os, sys
 import numpy as np
 import math
 from math import ceil
+import time
 from easydict import EasyDict as edict
 
-from utils import join_key_mapping
+from utils import join_keys_mapping
+from eval_hist import Eval_hist
 
 
 ACT = edict()
@@ -29,7 +31,9 @@ class NN_BASE:
 
     # Collection keys
     self.GKeys = edict()
-    self.GKeys.update(GKeys)
+    for k,v in GKeys.__dict__.items():
+      if ('__' not in k) and k is not 'VARIABLES':
+        self.GKeys[k] = v 
     self.GKeys.BATCH_NORM = 'batch_norm'
 
     # Config
@@ -37,8 +41,7 @@ class NN_BASE:
 
     # Session
     sess_config = tf.ConfigProto()
-    sess_config.gpu_option.allow_soft_placement = True
-    sess_config.gpu_option.allow_growth = True
+    sess_config.gpu_options.allow_growth = True
     self.sess = tf.Session(config=sess_config)
 
     # Saver
@@ -52,6 +55,7 @@ class NN_BASE:
 
     # Dataset
     self.dataset = dataset
+    self.dataset.set_config(config)
 
     # Eval-hist
     self.eval_hist = \
@@ -59,16 +63,11 @@ class NN_BASE:
 
     # Fed data dict
     self.fed = edict()
-
-
-  @property
-  def input_nodes(self):
-    return input_dict.values()
-
+  
 
   @property
-  def input_keys(self):
-    return input_dict.keys()
+  def batch_size(self):
+    return self.config.batch_size
 
 
   @property
@@ -165,10 +164,10 @@ class NN_BASE:
     if opt is None:
       opt = tf.train.AdamOptimizer(self.config.lr)
 
-    loss_avg_op = self.vizer._sum_losses(loss)
+    sum_loss_op = self.vizer._sum_losses(loss)
 
     # Compute gradients.
-    with tf.control_dependencies([loss_avg_op]):
+    with tf.control_dependencies([sum_loss_op]):
       grads = opt.compute_gradients(loss)
       apply_grads_op = opt.apply_gradients(
           grads, global_step=self.global_step)
@@ -199,6 +198,7 @@ class NN_BASE:
     for key in collections:
       loss_vars.extend(tf.get_collection(GKeys.LOSSES))
     total_loss = tf.add_n(loss_vars, name=name)
+    return total_loss
 
 
   def _cross_entropy_loss(self,
@@ -224,7 +224,7 @@ class NN_BASE:
       # preprocess logits
       logits = tf.reshape(logits, (-1, n_cls))
       logits = logits + epsilon
-      assert act in ACT.keys(), \
+      assert act in ACT.values(), \
           "Invalid activation type {}".format(act)
       if act == ACT.SOFTMAX:
         logits = tf.nn.softmax(logits) + epsilon
@@ -232,7 +232,7 @@ class NN_BASE:
         logits = tf.nn.sigmoid(logits) + epsilon
 
       # preprocess labels
-      labels = tf.cast(labels, tf.int32)
+      labels = tf.cast(labels, tf.float32)
 
       # compute cross entropy mean
       if loss_weights is None:
@@ -294,7 +294,6 @@ class NN_BASE:
     assert len(shape) == 4, \
         ("conv2d requires shape of format " \
          "(k1, k2, in_c, out_c)")
-    k_size, _, in_c, out_c = shape
     with tf.variable_scope('conv2d') as scope:
       kernel = self._var('weights',
                          shape=shape,
@@ -310,12 +309,12 @@ class NN_BASE:
 
       if bias:
         biases = self._var('biases',
-                           shape=[out_c],
+                           shape=[shape[3]],
                            collections=[GKeys.BIASES],
                            initializer=init.biases)
         conv = tf.nn.bias_add(conv, biases)
 
-    return conv_out
+    return conv
 
 
   def _dilated_conv2d(self,
@@ -407,24 +406,26 @@ class NN_BASE:
                   is_training,
                   center=True,
                   scale=True,
-                  bn_init=None):
+                  bn_init=None,
+                  scope=None):
+    if scope is None:
+      scope = tf.contrib.framework.get_name_scope()
+
     return tf.cond(is_training,
         lambda: tf.contrib.layers.batch_norm(inputT,
                     is_training=True,
-                    center=True,
-                    scale=True,
+                    center=center,
+                    scale=scale,
                     param_initializers=bn_init,
                     updates_collections=None,
-                    variables_collections=[ \
-                      self.GKeys.BATCH_NORM],
-                    scope="batch_norm",
+                    scope=scope + '_bn',
                     reuse=None), \
         lambda: tf.contrib.layers.batch_norm(inputT,
                     is_training=False,
-                    center=True,
-                    scale=True,
+                    center=center,
+                    scale=scale,
                     updates_collections=None,
-                    scope="batch_norm",
+                    scope=scope + '_bn',
                     reuse=True))
 
 
@@ -467,23 +468,24 @@ class NN_BASE:
     Bilinear upsampled weights
     Ref: https://github.com/MarvinTeichmann/tensorflow-fcn
     """
-    f = ceil(k_size / 2.)
-    c = (2 * f - 1 - f % 2) / (2.0 * f)
-    bilinear = np.zeros((ksize, ksize))
-    for x in xrange(ksize):
+    with tf.variable_scope('bilinear_weights') as scope:
+      f = ceil(ksize / 2.)
+      c = (2 * f - 1 - f % 2) / (2.0 * f)
+      bilinear = np.zeros((ksize, ksize))
+      for x in xrange(ksize):
         for y in xrange(ksize):
-            value = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
-            bilinear[x, y] = value
-    weights_shape = [ksize, ksize, out_c, out_c]
-    weights = np.zeros(weights_shape)
-    for i in xrange(out_c):
+          value = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
+          bilinear[x, y] = value
+      weights_shape = [ksize, ksize, out_c, out_c]
+      weights = np.zeros(weights_shape)
+      for i in xrange(out_c):
         weights[:, :, i, i] = bilinear
 
-    init = tf.constant_initializer(value=weights,
-                                   dtype=tf.float32)
+      init = tf.constant_initializer(value=weights,
+                                     dtype=tf.float32)
 
-    return tf.get_variable(name="bilinear_weights",
-                           initializer=init,
+      return tf.get_variable(name="bilinear_weights",
+                             initializer=init,
                            shape=weights_shape)
 
 
@@ -499,7 +501,7 @@ class NN_BASE:
             alpha=0.0001,
             beta=0.75,
             name=None):
-    return tf.nn.lrn(self.input_dict.images,
+    return tf.nn.lrn(inputT,
                      depth_radius=depth_radius,
                      bias=bias,
                      alpha=alpha,

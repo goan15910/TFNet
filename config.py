@@ -6,15 +6,13 @@ from math import ceil
 config = edict()
 
 # Training process related
-config.batch_size = edict()
-config.batch_size.train = None
-config.batch_size.val = None
-config.batch_size.test = None
+config.batch_size = None
 config.max_steps = None
-config.lr = None
+config.lr = 1e-3
 
 # Dataset related
-config.shuffle = None # shuffle train or not
+config.shuffle = True # shuffle train or not
+config.q_thres = 25
 
 # Optimization related
-config.wd = None
+config.wd = 5*1e-4

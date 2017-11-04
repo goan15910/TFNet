@@ -17,7 +17,6 @@ class Initer:
   Initializer for graph.
   """
   def __init__(self,
-               config,
                npy_file=None):
     self._npy_init = None
     self._ckpt_fname = None
@@ -95,10 +94,9 @@ class Initer:
                 shape,
                 method):
     """Get init for var"""
-    assert init_method in InitMethod.keys(), \
-        "Invalid init_method {}".format(init_method)
-
-    if method is None:
+    try:
+      self._check_init_method(method)
+    except TypeError:
       assert self._set_default_method_already(), \
           "Set default method first!"
       method = self.init_method
@@ -106,7 +104,7 @@ class Initer:
     if method == InitMethod.XAVIER:
       return tf.contrib.layers.xavier_initializer()
     elif method == InitMethod.MSRA:
-      return self._msra_initializer(shape)
+      return self._msra_init(shape)
     elif method == InitMethod.ORTHOGONAL:
       return self._orthogonal_init(shape)
 
@@ -151,13 +149,17 @@ class Initer:
       From Lasagne and Keras. Reference: Saxe et al.,
       http://arxiv.org/abs/1312.6120
       """
-      flat_shape = (shape[0], np.prod(shape[1:]))
-      a = np.random.normal(0.0, 1.0, flat_shape)
-      u, _, v = np.linalg.svd(a, full_matrices=False)
-      # pick the one with the correct shape
-      q = u if u.shape == flat_shape else v
-      q = q.reshape(shape) #this needs to be corrected to float32
-      return tf.constant(scale * q[:shape[0], :shape[1]], dtype=tf.float32)
+      def _init(shape,
+                dtype=tf.float32,
+                partition_info=None):
+        flat_shape = (shape[0], np.prod(shape[1:]))
+        a = np.random.normal(0.0, 1.0, flat_shape)
+        u, _, v = np.linalg.svd(a, full_matrices=False)
+        # pick the one with the correct shape
+        q = u if u.shape == flat_shape else v
+        q = q.reshape(shape) #this needs to be corrected to float32
+        return tf.constant(scale * q[:shape[0], :shape[1]], dtype=tf.float32)
+      return _init
 
 
   def _set_default_method_already(self):
@@ -168,5 +170,8 @@ class Initer:
 
 
   def _check_init_method(self, method):
-    assert method in InitMethod.values(), \
+    if method is None:
+      raise TypeError
+    else:
+      assert method in InitMethod.values(), \
         "Invalid initialization method {}".format(method)

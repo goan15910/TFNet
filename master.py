@@ -9,7 +9,6 @@ from easydict import EasyDict as edict
 # modules
 from Datasets import dataset_table as d_table
 from Models import model_table as m_table
-from config import config
 from initer import Initer
 from vizer import Vizer
 
@@ -29,14 +28,12 @@ class Master:
     self.mode = FLAGS.mode
     self.dataset_dir = FLAGS.dataset_dir
     self.save_dir = FLAGS.save_dir
-    self.n_threads = int(FLAGS.threads / 2)
+    self.n_threads = FLAGS.threads
     self.pretrained = FLAGS.pretrained
     # TODO
     #self.log_dir = FLAGS.log_dir
     #self.test_ckpt = FLAGS.test_ckpt
 
-    # Config, model, dataset
-    self.config = config
     self.m_class = m_table[FLAGS.model]
     self.d_class = d_table[FLAGS.dataset]
 
@@ -50,9 +47,11 @@ class Master:
     """Run the specified mode"""
     self._setup()
     if self.mode == MODE.TRAIN:
+      print "Start training ..."
       self.model.build()
       self.model.train()
     elif self.mode == MODE.TEST:
+      print "Start testing ..."
       # TODO: restore ckpt first
       self.model.build()
       self.model.eval(SET.TEST)
@@ -64,28 +63,33 @@ class Master:
   def _setup(self):
     """Setup all components"""
     # dataset
+    if self.mode == MODE.TRAIN:
+      use_sets = (SET.TRAIN, SET.VAL)
+    elif self.mode == MODE.TEST:
+      use_sets = (SET.TEST)
     self.dataset = self.d_class(
                        self.dataset_dir,
-                       self.config,
+                       use_sets,
                        self.n_threads)
-    print "Loading {} with {} threads".format(self.dataset.name, self.n_threads * 2)
+
+    # initer
+    self.initer = Initer(self.pretrained)
+
+    # vizer
+    self.vizer = Vizer(self.save_dir)
+
+    # model
+    self.model = self.m_class(
+                     self.dataset,
+                     self.initer,
+                     self.vizer,
+                     self.save_dir)
+    
+    # Start loading dataset
+    print "Loading {} with {} threads".format(
+              self.dataset.name,
+              self.n_threads)
     self.dataset.start()
-
-    with tf.Graph().as_default():
-      # initer
-      self.initer = Initer(self.config,
-                           self.pretrained)
-
-      # vizer
-      self.vizer = Vizer(self.save_dir)
-
-      # model
-      self.model = self.m_class(
-                       self.config,
-                       self.dataset,
-                       self.initer,
-                       self.vizer,
-                       self.save_dir)
 
 
   def _done(self):

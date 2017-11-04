@@ -4,7 +4,6 @@ import numpy as np
 from Networks.encoder_decoder import ENCODER_DECODER
 from Datasets.dataset import SET
 from vizer import SummaryType
-from eval_hist import Eval_hist
 
 
 class SegNet_Template(ENCODER_DECODER):
@@ -28,13 +27,13 @@ class SegNet_Template(ENCODER_DECODER):
   def build(self):
     """Total Graph of SegNet"""
     with tf.variable_scope('input') as scope:
-      im_shape = [None] + self.dataset.datum_shape[1]
-      la_shape = [None] + self.dataset.datum_shape[2]
+      im_shape = [None] + self.dataset.datum_shapes[1]
+      la_shape = [None] + self.dataset.datum_shapes[2]
       self.fed.images = tf.placeholder(
           tf.float32, im_shape,
           name='images')
       self.fed.labels = tf.placeholder(
-          tf.int64, la_shape,
+          tf.int32, la_shape,
           name='labels')
 
     # train op
@@ -63,6 +62,9 @@ class SegNet_Template(ENCODER_DECODER):
     for step in xrange(self.config.max_steps):
       # Get feed_dict
       feed_dict = self._feed_dict(SET.TRAIN)
+      print feed_dict.keys()
+      print "images shape {}".format(feed_dict[self.fed.images])
+      print "labels shape {}".format(feed_dict[self.fed.labels])
 
       # Optimization
       out_list, t_cost = self._forward(

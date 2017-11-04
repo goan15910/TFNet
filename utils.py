@@ -1,7 +1,8 @@
 import numpy as np
+from easydict import EasyDict as edict
 
 
-def join_key_mapping(d1, d2):
+def join_keys_mapping(d1, d2):
   """
   Mapping values from join keys of two dict.
   Args:
@@ -11,12 +12,12 @@ def join_key_mapping(d1, d2):
     A dictionary with items of v1: v2,
     where v1, v2 is the value from join keys of d1, d2
   """
-  join_keys = set().union(
-                  d1.keys(),
-                  d2.keys())
+  #join_keys = set().union(d1.keys(), d2.keys())
+  join_keys = set().intersection(d1.keys(), d2.keys())
   join_keys = list(join_keys)
-  value_dict = edict()
+  value_dict = {}
   for k in join_keys:
+    print k
     v1 = d1[k]
     v2 = d2[k]
     value_dict[v1] = v2

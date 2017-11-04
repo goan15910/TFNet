@@ -1,11 +1,12 @@
 import tensorflow as tf
 from segnet_template import SegNet_Template
+from config import config
+from initer import InitMethod
 
 
 class Simple_SegNet(SegNet_Template):
   """Simple SegNet"""
   def __init__(self,
-               config,
                dataset,
                initer,
                vizer,
@@ -14,12 +15,16 @@ class Simple_SegNet(SegNet_Template):
                              config,
                              dataset,
                              initer,
-                             initer,
+                             vizer,
                              save_dir)
+    
+    # Set config
+    config.batch_size = 4
+    config.max_steps = 20000
 
 
   def build(self):
-    SegNet_Template.build()
+    SegNet_Template.build(self)
 
     # Normalize input
     with tf.variable_scope('input_norm') as scope:
@@ -30,13 +35,27 @@ class Simple_SegNet(SegNet_Template):
     encoder_out = self._encoder(norm1)
 
     # Decoder
-    self.logits = self._decoder(encoder_out)
+    decoder_out = self._decoder(encoder_out)
+
+    # Logits
+    with tf.variable_scope('classifier') as scope:
+      self.logits = self.conv(
+                      decoder_out,
+                      [1, 1, 64, self.n_classes],
+                      init_method=InitMethod.MSRA,
+                      act=False,
+                      bn=False,
+                      name='conv_out')
 
     # Loss
+    # TODO: add loss weights
+    onehot_labels = self._onehot_labels(
+                        self.fed.labels,
+                        self.n_classes)
     xentropy_loss = self._cross_entropy_loss(
                         self.logits,
-                        self.fed.labels,
-                        loss_weights)
+                        onehot_labels,
+                        loss_weights=None)
     self.total_loss = self._total_loss(
                         collections=[self.GKeys.LOSSES],
                         name='total_loss')
@@ -64,16 +83,16 @@ class Simple_SegNet(SegNet_Template):
 
   def _decoder(self, inputT):
     with tf.variable_scope('decoder') as scope:
-      up4 = self.deconv(inputT, [None, 45, 60, 64], name="up4")
-      conv_up4 = self.conv(up5, [7, 7, 64, 64], act=False, name="conv_up4")
+      up4 = self.deconv(inputT, [self.batch_size, 45, 60, 64], name="up4")
+      conv_up4 = self.conv(up4, [7, 7, 64, 64], act=False, name="conv_up4")
 
-      up3 = self.deconv(conv_up4, [None, 90, 120, 64], name="up3")
+      up3 = self.deconv(conv_up4, [self.batch_size, 90, 120, 64], name="up3")
       conv_up3 = self.conv(up3, [7, 7, 64, 64], act=False, name="conv_up3")
 
-      up2 = self.deconv(conv_up3, [None, 180, 240, 64], name="up2")
+      up2 = self.deconv(conv_up3, [self.batch_size, 180, 240, 64], name="up2")
       conv_up2 = self.conv(up2, [7, 7, 64, 64], act=False, name="conv_up2")
 
-      up1 = self.deconv(conv_up2, [None, 360, 480, 64], name="up1")
+      up1 = self.deconv(conv_up2, [self.batch_size, 360, 480, 64], name="up1")
       conv_up1 = self.conv(up1, [7, 7, 64, 64], act=False, name="conv_up1")
 
       return conv_up1

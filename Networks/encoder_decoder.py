@@ -1,3 +1,5 @@
+import tensorflow as tf
+
 import os, sys
 import numpy as np
 import math
@@ -31,6 +33,11 @@ class ENCODER_DECODER(NN_BASE):
     self.initer.set_default_method(InitMethod.ORTHOGONAL)
 
 
+  @property
+  def n_classes(self):
+    return self.dataset.num_classes
+
+  
   def build(self):
     raise NotImplementedError
 
@@ -77,7 +84,7 @@ class ENCODER_DECODER(NN_BASE):
                                    wd)
 
       if bn:
-        out = self._batch_norm(inputT,
+        out = self._batch_norm(out,
                                self.phase_train,
                                bn_init=bn_init)
 
@@ -95,16 +102,15 @@ class ENCODER_DECODER(NN_BASE):
              padding='SAME',
              name=None):
     """Deconvolution using bilinear upsampled weights"""
-    batch_size, _, _, in_c = inputT.get_shape.as_list()
-    weights = self._bilinear_weights(ksize, in_c)
-    if output_shape[0] is None:
-      output_shape[0] = batch_size
-    out = self._deconv2d(inputT,
-                         weights,
-                         output_shape,
-                         stride,
-                         padding)
-    return out
+    with tf.variable_scope(name) as scope:
+      in_c = inputT.get_shape().as_list()[-1]
+      weights = self._bilinear_weights(ksize, in_c)
+      out = self._deconv2d(inputT,
+                           weights,
+                           output_shape,
+                           stride,
+                           padding)
+      return out
 
 
   def maxpool(self,

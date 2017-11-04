@@ -38,13 +38,15 @@ class BaseQueue:
   """
   def __init__(self,
                n_threads,
-               min_queue_num,
-               batch_size=1):
+               thres,
+               batch_size,
+               maxsize=50):
     # basics
     self.queue = None
     self.n_threads = n_threads
-    self.min_queue_num
+    self.thres = thres
     self.batch_size = batch_size
+    self.maxsize = maxsize
     self.workers = None
 
 
@@ -52,15 +54,15 @@ class BaseQueue:
             push_func,
             args):
     """Start loading queue"""
-    self.queue = Queue()
-    full_args = [self.queue]
-    for i in xrange(n_threads):
-      full_args.extend(args)
+    self.workers = []
+    self.queue = Queue(maxsize=self.maxsize)
+    full_args = [self.queue] + list(args)
+    for i in xrange(self.n_threads):
       worker = Thread(target=push_func,
                       args=full_args)
       worker.setDaemon(True)
       worker.start()
-      self.workers = worker
+      self.workers.append(worker)
 
 
   def done(self):
@@ -74,13 +76,14 @@ class BaseQueue:
     """Pop items of batch size"""
     pop_items = []
     for i in xrange(self.batch_size):
-      pop_items.append(self._pop())
+      pop_item = self.pop()
+      pop_items.append(pop_item)
     return pop_items
 
 
   def pop(self):
     """Pop one index out"""
-    while (self.queue.qsize() > self.min_queue_num):
+    while (self.queue.qsize() > self.thres):
       try:
         return self.queue.get()
       except:

@@ -19,7 +19,7 @@ class SegNet(SegNet_Template):
 
 
   def build(self):
-    SegNet_Template.build()
+    SegNet_Template.build(self)
 
     # Normalize input
     with tf.variable_scope('input_norm') as scope:

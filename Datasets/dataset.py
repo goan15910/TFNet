@@ -6,7 +6,7 @@ from threading import Thread
 import numpy as np
 import cv2
 from easydict import EasyDict as edict
-from base_queue import BaseQueue, push_idxs, push_batch
+from data_queue import DataQueue
 
 
 # Flags for SET
@@ -19,23 +19,22 @@ SET.TEST = 'test'
 class Dataset:
   """Base class of dataset object"""
   def __init__(self,
-               config,
-               n_threads):
+               root_dir,
+               use_sets,
+               n_threads=6):
     # Basic info
-    self.config = config
     self.name = None
-    self.n_threads = n_threads
-    self._batch_key = None
+    self.root_dir = root_dir
+    self.n_threads = max(6, n_threads)
+    self._batch_keys = None
     self._datum_shape = None
-    self._min_queue_num = None
+    self._q_thres = None
 
     # Train / val / test sets
     self._set = edict()
-    for skey in SET.keys():
+    for skey in use_sets:
       self._set[skey] = edict()
-      self._set[skey].fnames = None
-      self._set[skey].idx_q = None
-      self._set[skey].batch_q = None
+      self._set[skey].data_q = None
 
     # Dataset info
     self._n_cls = None
@@ -44,24 +43,34 @@ class Dataset:
 
 
   @property
-  def batch_key(self):
-    if self._batch_key is None:
+  def batch_keys(self):
+    if self._batch_keys is None:
       raise NotImplementedError
-    return self._batch_key
+    return self._batch_keys
 
 
   @property
-  def datum_shape(self):
-    if self._datum_shape is None:
+  def datum_shapes(self):
+    if self._datum_shapes is None:
       raise NotImplementedError
-    return self._datum_shape
+    return self._datum_shapes
 
+  
+  @property
+  def n_sets(self):
+    return len(self._set.keys())
+  
 
   @property
-  def min_queue_num(self):
-    if self._min_queue_num is None:
+  def n_q_threads(self):
+    return  self.n_threads / self.n_sets
+
+  
+  @property
+  def q_thres(self):
+    if self._q_thres is None:
       raise NotImplementedError
-    return self._min_queue_num
+    return self._q_thres
 
 
   @property
@@ -94,51 +103,53 @@ class Dataset:
     return (epoch_steps, n_examples)
 
 
+  def set_config(self, config):
+    self.config = config
+
+    # thres for queue
+    self._q_thres = \
+        self.config.q_thres
+
+  
   def start(self):
-    self._load_idxs(self.fname_dict)
-    self._load_batches()
+    self._load()
 
 
   def done(self):
     for _set in self._set.values():
-      _set.idx_q.done()
-      _set.batch_q.done()
+      _set.data_q.done()
 
 
   def batch(self, skey):
     """Get a mini-batch data"""
-    self._check_set_key(skey)
-    batch_item = self._set[skey].pop()
-    batch = zip(self.batch_key, self.batch_item)
-    return edict(dict(batch_dict))
+    self._check_skey(skey)
+    batch_items = self._set[skey].data_q.pop_batch()
+    batch_pairs = zip(self.batch_keys, batch_items)
+    return edict(dict(batch_pairs))
 
 
-  def _load_idxs(self):
-    """Start loading idx-queue"""
+  def _load(self):
+    """Start loading idx/batch queue"""
     fname_dict = self.fname_dict
-    for skey in set(fname_dict.keys()):
-      self._check_set_key(skey)
-      fnames = self._read_fnames(fname_dict[skey])
-      batch_size = self.config.batch_size[skey]
+    for skey in self._set.keys():
+      self._check_skey(skey)
+      batch_size = self.config.batch_size
       if skey == SET.TRAIN:
         shuffle = self.config.shuffle
       else:
         shuffle = False
 
-      idx_q = BaseQueue(self.n_threads, batch_size)
-      push_idxs_args = (len(fnames), shuffle)
-      idx_q.start(push_idxs, args)
-      self._set[skey].idx_q = idx_q
-      self._set[skey].fnames = fnames
-
-
-  def _load_batches(self):
-    """Start loading batch-queue"""
-    batch_queue = BaseQueue(self.n_threads)
-    push_batch_args = \
-        (self.idx_q.queue, self._read_func)
-    batch_queue.start(push_batch,
-                      push_batch_args)
+      # data queue
+      data_q = DataQueue(
+                   fname_dict[skey],
+                   batch_size,
+                   self._read_fnames,
+                   self._decode_func,
+                   n_threads=self.n_q_threads,
+                   thres=self.q_thres,
+                   shuffle=shuffle)
+      data_q.start()
+      self._set[skey].data_q = data_q
 
 
   def _read_fnames(self, fname):
@@ -150,5 +161,5 @@ class Dataset:
 
 
   def _check_skey(self, skey):
-    assert skey in SETS.values(), \
+    assert skey in SET.values(), \
         "Invalid set {}".format(skey)

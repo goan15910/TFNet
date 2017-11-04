@@ -16,15 +16,18 @@ class CamVid(Dataset):
   """
   def __init__(self,
                root_dir,
-               config,
+               use_sets,
                n_threads):
-    Dataset.__init__(config, n_threads)
+    Dataset.__init__(self,
+                     root_dir,
+                     use_sets,
+                     n_threads)
     # name
     self.name = 'CamVid'
 
     # batch-key
-    self._batch_key = ('clips', 'images', 'labels')
-    self._datum_shape = (None, [360, 480, 3], [360, 480, 1])
+    self._batch_keys = ('clips', 'images', 'labels')
+    self._datum_shapes = (None, [360, 480, 3], [360, 480, 1])
 
     # fname-dict
     self.fname_dict = edict()
@@ -70,24 +73,22 @@ class CamVid(Dataset):
     return fnames
 
 
-  def _decode_func(self, idxs):
-    """
-    Read-func of decoding idxs to batch
-    Args:
-      idxs: a list of index
-    Return:
-      A decode func
-    """
+  def _decode_func(self, fnames):
     # Define the decode function
     def camvid_decode(idxs):
+      """
+      Read-func of decoding idxs to batch
+      Args:
+        idxs: a list of index
+      """
       clips = []
       images = []
       labels = []
       for idx in idxs:
-        clip, im, la = self.fnames[idx]
+        clip, im, la = fnames[idx]
         clips.append(clip)
         image = cv2.imread(im)
-        label = cv2.imread(la)
+        label = cv2.imread(la)[..., 0]
         images.append(image)
         labels.append(label)
       return (clips, images, labels)
