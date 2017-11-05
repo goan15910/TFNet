@@ -20,7 +20,7 @@ ACT.SIGMOID = 'sigmoid'
 class NN_BASE:
   """Base components of general NN structure"""
   def __init__(self,
-               config,
+               cfg,
                dataset,
                initer,
                vizer,
@@ -33,11 +33,11 @@ class NN_BASE:
     self.GKeys = edict()
     for k,v in GKeys.__dict__.items():
       if ('__' not in k) and k is not 'VARIABLES':
-        self.GKeys[k] = v 
+        self.GKeys[k] = v
     self.GKeys.BATCH_NORM = 'batch_norm'
 
-    # Config
-    self.config = config
+    # config
+    self.cfg = cfg
 
     # Session
     sess_config = tf.ConfigProto()
@@ -55,7 +55,6 @@ class NN_BASE:
 
     # Dataset
     self.dataset = dataset
-    self.dataset.set_config(config)
 
     # Eval-hist
     self.eval_hist = \
@@ -63,11 +62,11 @@ class NN_BASE:
 
     # Fed data dict
     self.fed = edict()
-  
+
 
   @property
   def batch_size(self):
-    return self.config.batch_size
+    return self.cfg.batch_size
 
 
   @property
@@ -162,7 +161,7 @@ class NN_BASE:
     """train-op"""
     # Default optimizer
     if opt is None:
-      opt = tf.train.AdamOptimizer(self.config.lr)
+      opt = tf.train.AdamOptimizer(self.cfg.lr)
 
     sum_loss_op = self.vizer._sum_losses(loss)
 

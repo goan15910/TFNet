@@ -4,34 +4,6 @@ from Queue import Queue
 from threading import Thread
 
 
-def push_idxs(q, n_idx, shuffle):
-  """Push idxs into queue"""
-  cur = 0
-  idxs = np.arange(n_idx)
-  if shuffle:
-    np.random.shuffle(idxs)
-
-  while True:
-    if cur == (n_idx-1):
-      if shuffle:
-        np.random.shuffle(idxs)
-      cur = 0
-    q.put(idxs[cur])
-    cur += 1
-
-
-def push_seq_idxs(q, n_idx, shuffle):
-  """Push idxs as seq into queue"""
-  # TODO
-  pass
-
-
-def push_batch(q, idx_q, decode_func):
-  while True:
-    batch = decode_func(idx_q.pop_batch())
-    q.put(batch)
-
-
 class BaseQueue:
   """
   Queue object

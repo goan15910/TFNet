@@ -9,13 +9,13 @@ from vizer import SummaryType
 class SegNet_Template(ENCODER_DECODER):
   """SegNet template"""
   def __init__(self,
-               config,
+               cfg,
                dataset,
                initer,
                vizer,
                save_dir):
     ENCODER_DECODER.__init__(self,
-                             config,
+                             cfg,
                              dataset,
                              initer,
                              vizer,
@@ -59,7 +59,7 @@ class SegNet_Template(ENCODER_DECODER):
                self.fed.labels,
                self.train_op]
 
-    for step in xrange(self.config.max_steps):
+    for step in xrange(self.cfg.max_steps):
       # Get feed_dict
       feed_dict = self._feed_dict(SET.TRAIN)
       print feed_dict.keys()

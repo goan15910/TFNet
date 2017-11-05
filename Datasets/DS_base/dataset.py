@@ -35,6 +35,7 @@ class Dataset:
     for skey in use_sets:
       self._set[skey] = edict()
       self._set[skey].data_q = None
+      self._set[skey].
 
     # Dataset info
     self._n_cls = None
@@ -55,17 +56,22 @@ class Dataset:
       raise NotImplementedError
     return self._datum_shapes
 
-  
+
   @property
   def n_sets(self):
     return len(self._set.keys())
-  
+
+
+  @property
+  def batch_size(self):
+    return self.config.batch_size
+
 
   @property
   def n_q_threads(self):
     return  self.n_threads / self.n_sets
 
-  
+
   @property
   def q_thres(self):
     if self._q_thres is None:
@@ -94,13 +100,10 @@ class Dataset:
     return self._cls_colors
 
 
-  def epoch_info(self, skey):
-    """Compute epoch steps and total number of examples"""
+  def epoch_steps(self, skey):
+    """Steps to run through whole epoch"""
     self._check_set_key(skey)
-    n_examples = len(self._set[skey].fnames)
-    batch_size = self.config.batch_size
-    epoch_steps = np.ceil(n_examples / batch_size).astype(np.int64)
-    return (epoch_steps, n_examples)
+    return data_container.epoch_steps
 
 
   def set_config(self, config):
@@ -110,7 +113,7 @@ class Dataset:
     self._q_thres = \
         self.config.q_thres
 
-  
+
   def start(self):
     self._load()
 

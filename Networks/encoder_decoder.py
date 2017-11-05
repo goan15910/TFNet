@@ -13,14 +13,14 @@ from initer import InitMethod
 class ENCODER_DECODER(NN_BASE):
   """Encoder-Decoder structure"""
   def __init__(self,
-               config,
+               cfg,
                dataset,
                initer,
                vizer,
                save_dir):
     # Default init
     NN_BASE.__init__(self,
-                     config,
+                     cfg,
                      dataset,
                      initer,
                      vizer,
@@ -37,7 +37,7 @@ class ENCODER_DECODER(NN_BASE):
   def n_classes(self):
     return self.dataset.num_classes
 
-  
+
   def build(self):
     raise NotImplementedError
 
@@ -64,7 +64,7 @@ class ENCODER_DECODER(NN_BASE):
                              name,
                              init_method)
       bn_init = self.bn_init(name)
-      wd = self.config.wd
+      wd = self.cfg.wd
 
       if dilation is None:
         out = self._conv2d(inputT,

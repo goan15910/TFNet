@@ -1,6 +1,6 @@
 import tensorflow as tf
 from segnet_template import SegNet_Template
-from config import config
+from Config.model_config import config
 from initer import InitMethod
 
 
@@ -11,16 +11,19 @@ class Simple_SegNet(SegNet_Template):
                initer,
                vizer,
                save_dir):
+    # customize config here
+    cfg = config
+    cfg.batch_size = 4
+    cfg.max_steps = 20000
+
+
+    # setup segnet template
     SegNet_Template.__init__(self,
-                             config,
+                             cfg,
                              dataset,
                              initer,
                              vizer,
                              save_dir)
-    
-    # Set config
-    config.batch_size = 4
-    config.max_steps = 20000
 
 
   def build(self):

@@ -31,7 +31,6 @@ class Master:
     self.n_threads = FLAGS.threads
     self.pretrained = FLAGS.pretrained
     # TODO
-    #self.log_dir = FLAGS.log_dir
     #self.test_ckpt = FLAGS.test_ckpt
 
     self.m_class = m_table[FLAGS.model]
@@ -69,8 +68,7 @@ class Master:
       use_sets = (SET.TEST)
     self.dataset = self.d_class(
                        self.dataset_dir,
-                       use_sets,
-                       self.n_threads)
+                       use_sets)
 
     # initer
     self.initer = Initer(self.pretrained)
@@ -84,11 +82,9 @@ class Master:
                      self.initer,
                      self.vizer,
                      self.save_dir)
-    
+
     # Start loading dataset
-    print "Loading {} with {} threads".format(
-              self.dataset.name,
-              self.n_threads)
+    print "Loading {}".format(self.dataset.name)
     self.dataset.start()
 
 

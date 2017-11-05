@@ -3,8 +3,9 @@ import os,sys
 import numpy as np
 import cv2
 from easydict import EasyDict as edict
-from dataset import Dataset, SET
+from DS_base.dataset import Dataset, SET
 import statistics as stats
+from Config.dataset_config import config
 
 
 class CamVid(Dataset):
@@ -16,12 +17,16 @@ class CamVid(Dataset):
   """
   def __init__(self,
                root_dir,
-               use_sets,
-               n_threads):
+               use_sets):
+    # customize cfg here
+    cfg = config
+    # no customize setting
+
+    # setup dataset skeleton
     Dataset.__init__(self,
                      root_dir,
-                     use_sets,
-                     n_threads)
+                     cfg,
+                     use_sets)
     # name
     self.name = 'CamVid'
 
