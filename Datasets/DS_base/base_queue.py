@@ -10,14 +10,12 @@ class BaseQueue:
   """
   def __init__(self,
                n_threads,
-               thres,
-               batch_size,
+               min_frac,
                maxsize=50):
     # basics
     self.queue = None
     self.n_threads = n_threads
-    self.thres = thres
-    self.batch_size = batch_size
+    self.thres = max(int(maxsize * min_frac), 1)
     self.maxsize = maxsize
     self.workers = None
 
@@ -44,10 +42,10 @@ class BaseQueue:
     self.queue.join()
 
 
-  def pop_batch(self):
+  def pop_n(self, N):
     """Pop items of batch size"""
     pop_items = []
-    for i in xrange(self.batch_size):
+    for i in xrange(N):
       pop_item = self.pop()
       pop_items.append(pop_item)
     return pop_items

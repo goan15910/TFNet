@@ -7,6 +7,7 @@ import numpy as np
 import cv2
 from easydict import EasyDict as edict
 from data_queue import DataQueue
+from data_list import DataList
 
 
 # Flags for SET
@@ -20,22 +21,20 @@ class Dataset:
   """Base class of dataset object"""
   def __init__(self,
                root_dir,
-               use_sets,
-               n_threads=6):
+               cfg,
+               use_sets):
     # Basic info
     self.name = None
     self.root_dir = root_dir
-    self.n_threads = max(6, n_threads)
     self._batch_keys = None
     self._datum_shape = None
-    self._q_thres = None
+    self.cfg = cfg
 
     # Train / val / test sets
-    self._set = edict()
+    self._use_sets = use_sets
+    self.dc = edict() # data container
     for skey in use_sets:
-      self._set[skey] = edict()
-      self._set[skey].data_q = None
-      self._set[skey].
+      self.dc[skey] = None
 
     # Dataset info
     self._n_cls = None
@@ -59,24 +58,12 @@ class Dataset:
 
   @property
   def n_sets(self):
-    return len(self._set.keys())
+    return len(self._use_sets)
 
 
   @property
   def batch_size(self):
     return self.config.batch_size
-
-
-  @property
-  def n_q_threads(self):
-    return  self.n_threads / self.n_sets
-
-
-  @property
-  def q_thres(self):
-    if self._q_thres is None:
-      raise NotImplementedError
-    return self._q_thres
 
 
   @property
@@ -103,56 +90,54 @@ class Dataset:
   def epoch_steps(self, skey):
     """Steps to run through whole epoch"""
     self._check_set_key(skey)
-    return data_container.epoch_steps
-
-
-  def set_config(self, config):
-    self.config = config
-
-    # thres for queue
-    self._q_thres = \
-        self.config.q_thres
+    return self.dc[skey].epoch_steps
 
 
   def start(self):
-    self._load()
+    for skey in self._use_sets:
+      # basic info
+      self._check_skey(skey)
+      if skey == SET.TRAIN:
+        shuffle = self.config.shuffle
+      else:
+        shuffle = False
+      filename = self.fname_dict[skey]
+
+      # data queue
+      if self.cfg.use_q:
+        self.dc[skey] = DataQueue(
+            filename,
+            self.batch_size,
+            self._read_fnames,
+            self._decode_func,
+            self.cfg.n_idx_threads,
+            self.cfg.n_batch_threads,
+            self.cfg.q_min_frac,
+            self.cfg.maxsize,
+            shuffle=shuffle,
+            name=skey)
+      else:
+        self.dc[skey] = DataList(
+            filename,
+            self.batch_size,
+            self._read_fnames,
+            self._decode_func,
+            shuffle=shuffle,
+            name=skey)
+      self.dc[skey].start()
 
 
   def done(self):
-    for _set in self._set.values():
-      _set.data_q.done()
+    for dc in self.dc.values():
+      dc.done()
 
 
   def batch(self, skey):
     """Get a mini-batch data"""
     self._check_skey(skey)
-    batch_items = self._set[skey].data_q.pop_batch()
+    batch_items = self.dc[skey].pop_batch()
     batch_pairs = zip(self.batch_keys, batch_items)
     return edict(dict(batch_pairs))
-
-
-  def _load(self):
-    """Start loading idx/batch queue"""
-    fname_dict = self.fname_dict
-    for skey in self._set.keys():
-      self._check_skey(skey)
-      batch_size = self.config.batch_size
-      if skey == SET.TRAIN:
-        shuffle = self.config.shuffle
-      else:
-        shuffle = False
-
-      # data queue
-      data_q = DataQueue(
-                   fname_dict[skey],
-                   batch_size,
-                   self._read_fnames,
-                   self._decode_func,
-                   n_threads=self.n_q_threads,
-                   thres=self.q_thres,
-                   shuffle=shuffle)
-      data_q.start()
-      self._set[skey].data_q = data_q
 
 
   def _read_fnames(self, fname):

@@ -14,10 +14,11 @@ class DataQueue(DataContainer):
                batch_size,
                read_fnames_func,
                decode_func,
-               n_threads=3,
-               thres=20,
+               n_idx_threads=1,
+               n_batch_threads=2,
+               min_frac=0.4,
+               maxsize=50,
                shuffle=False,
-               ratio=2,
                name=''):
     # basics
     DataContainer.__init__(self,
@@ -28,24 +29,23 @@ class DataQueue(DataContainer):
                            shuffle,
                            name)
 
-    # idx-q / batch-q n_threads
-    idx_n_threads = max(n_threads / (1 + ratio), 1)
-    batch_n_threads = ratio * idx_n_threads
-
     # idx-q
     self.idx_q = BaseQueue(
-                     idx_n_threads,
-                     thres=thres,
-                     batch_size=self._bsize)
-    self.idx_q_args = (self.n_fname, self._shuffle)
+                     n_idx_threads,
+                     min_frac=min_frac,
+                     maxsize=maxsize)
+    self.idx_q_args = (self.n_fname,
+                       self._shuffle)
 
     # batch-q
     self.batch_q = BaseQueue(
-                       batch_n_threads,
-                       thres=thres,
-                       batch_size=self._bsize)
-    self.batch_q_args = \
-      (self.idx_q, self._decode, self.fnames)
+                       n_batch_threads,
+                       min_frac=min_frac,
+                       maxsize=maxsize)
+    self.batch_q_args = (self.idx_q,
+                         self._bsize
+                         self._decode,
+                         self.fnames)
 
 
   def start(self):
@@ -55,7 +55,7 @@ class DataQueue(DataContainer):
 
 
   def pop_batch(self):
-    return self.batch_q.pop_batch()
+    return self.batch_q.pop()
 
 
   def done(self):
