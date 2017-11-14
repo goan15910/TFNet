@@ -6,7 +6,10 @@ from math import ceil
 config = edict()
 
 # Basics
-config.shuffle = True # shuffle train or not
+config.shuffle = True # shuffle train set or not
+# if all examples have different shape,
+# datum shape is None
+config.datum_shape = None
 
 # Queue related
 config.use_q = False

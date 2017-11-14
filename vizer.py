@@ -23,11 +23,22 @@ class Vizer:
     # summary graph
     self.summary_writer = \
         tf.summary.FileWriter(self.log_dir)
-    self.summary_op = tf.summary.merge_all()
+    self.summary_op = None
 
     # placeholders & summarize op
     self.plds = edict()
     self.pld_sum_ops = edict()
+
+
+  @property
+  def summary_op(self):
+    assert self.summary_op is not None, \
+        "Merge all first!"
+    return self.summary_op
+
+
+  def merge_all(self):
+    self.summary_op = tf.summary.merge_all()
 
 
   def add_pld(self,
@@ -90,6 +101,7 @@ class Vizer:
                    feed_dict,
                    step):
     """Add summaries"""
+    print map(type, feed_dict.values())
     sum_str = sess.run(op_list,
                        feed_dict=feed_dict)
     self.summary_writer.add_summary(sum_str, step)

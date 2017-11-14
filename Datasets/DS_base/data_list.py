@@ -12,6 +12,7 @@ class DataList(DataContainer):
                batch_size,
                read_fnames_func,
                decode_func,
+               np_out,
                shuffle=False,
                name=''):
     # basics
@@ -20,22 +21,21 @@ class DataList(DataContainer):
                            batch_size,
                            read_fnames_func,
                            decode_func,
+                           np_out,
                            shuffle,
                            name)
 
     # data / indexes
     self._data = None
-    self._idxs = np.arange(self.n_fname)
+    self._idxs = None 
     self._cur_bidx = 0 # current batch index
 
 
   def start(self):
     print self._start_str.format(self._name)
-    data = []
-    for fname in self.fnames:
-      decoded_item = self._decode(fname)
-      data.append(decoded_item)
-    self._data = np.array(data)
+    self._idxs = np.arange(self.n_fname)
+    data = zip(*self._decode(self._idxs))
+    self._data = np.array(data, dtype=object)
 
 
   def pop_batch(self):
@@ -47,11 +47,16 @@ class DataList(DataContainer):
       self._cur_bidx = 0
     else:
       self._cur_bidx += 1
-    return self._data[batch_idxs]
+    batch_data = self._data[batch_idxs]
+    batch_data = zip(*batch_data)
+    if self._np_out:
+      batch_data = \
+        map(lambda x: np.hstack(x), batch_data)
+    return batch_data
 
 
   def done(self):
-    print self._stop_str.format(self._name)
+    print self._done_str.format(self._name)
 
 
   def _get_batch_idxs(self):

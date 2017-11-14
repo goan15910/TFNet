@@ -34,9 +34,6 @@ def push_batch(q,
                fnames):
   while True:
     idxs = idx_q.pop_n(bsize)
-    batch = []
-    for idx in idxs:
-      data = decode(fnames[idx])
-      batch.append(data)
+    batch = decode(idxs)
     batch = np.array(batch)
     q.put(batch)

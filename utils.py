@@ -13,11 +13,10 @@ def join_keys_mapping(d1, d2):
     where v1, v2 is the value from join keys of d1, d2
   """
   #join_keys = set().union(d1.keys(), d2.keys())
-  join_keys = set().intersection(d1.keys(), d2.keys())
+  join_keys = set(d1.keys()) & set(d2.keys())
   join_keys = list(join_keys)
   value_dict = {}
   for k in join_keys:
-    print k
     v1 = d1[k]
     v2 = d2[k]
     value_dict[v1] = v2

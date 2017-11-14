@@ -6,6 +6,7 @@ import numpy as np
 import math
 from math import ceil
 import time
+from datetime import datetime
 from easydict import EasyDict as edict
 
 from utils import join_keys_mapping
@@ -26,8 +27,13 @@ class NN_BASE:
                vizer,
                save_dir):
     # Default graph components
-    self.phase_train = tf.placeholder(tf.bool, name='phase_train')
-    self.global_step = tf.Variable(0, trainable=False)
+    self.phase_train = tf.placeholder(
+                           tf.bool,
+                           name='phase_train')
+    self.global_step = tf.Variable(
+                           0,
+                           trainable=False,
+                           name='global_step')
 
     # Collection keys
     self.GKeys = edict()
@@ -54,6 +60,7 @@ class NN_BASE:
     self.vizer = vizer
 
     # Dataset
+    dataset.set_batch_size(self.batch_size)
     self.dataset = dataset
 
     # Eval-hist
@@ -79,9 +86,21 @@ class NN_BASE:
     return self.initer.bn_init
 
 
-  def restore(self):
-    # TODO
-    pass
+  @property
+  def step(self):
+    return self.sess.run(self.global_step)
+
+
+  def run_init(self, ckpt):
+    if ckpt is None:
+      init = tf.global_variables_initializer()
+      self.sess.run(init)
+    else:
+      self.saver.restore(self.sess, ckpt)
+
+
+  def merge_all(self):
+    self.vizer.merge_all()
 
 
   def done(self):
@@ -168,8 +187,8 @@ class NN_BASE:
     # Compute gradients.
     with tf.control_dependencies([sum_loss_op]):
       grads = opt.compute_gradients(loss)
-      apply_grads_op = opt.apply_gradients(
-          grads, global_step=self.global_step)
+    apply_grads_op = opt.apply_gradients(
+        grads, global_step=self.global_step)
 
     # Add trainable variables to vizer
     for var in tf.trainable_variables():
@@ -217,11 +236,11 @@ class NN_BASE:
       mean cross-entropy loss
     """
     with tf.variable_scope('loss'):
-      n_cls = labels.get_shape().as_list()[-1]
+      N, H, W, C = logits.get_shape().as_list()
       epsilon = tf.constant(value=1e-10)
 
       # preprocess logits
-      logits = tf.reshape(logits, (-1, n_cls))
+      logits = tf.reshape(logits, (N*H*W, C))
       logits = logits + epsilon
       assert act in ACT.values(), \
           "Invalid activation type {}".format(act)
@@ -232,6 +251,7 @@ class NN_BASE:
 
       # preprocess labels
       labels = tf.cast(labels, tf.float32)
+      labels = tf.reshape(labels, (N*H*W, C))
 
       # compute cross entropy mean
       if loss_weights is None:
@@ -271,9 +291,10 @@ class NN_BASE:
       An onehot [batch_size, size] tensor
       with dtype of int32
     """
-    onehot_labels = tf.one_hot(labels,
-                               depth=n_classes,
-                               axis=axis)
+    onehot_labels = tf.one_hot(
+                        tf.squeeze(labels),
+                        depth=n_classes,
+                        axis=axis)
     return onehot_labels
 
 

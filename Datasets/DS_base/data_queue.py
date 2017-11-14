@@ -14,6 +14,7 @@ class DataQueue(DataContainer):
                batch_size,
                read_fnames_func,
                decode_func,
+               np_out,
                n_idx_threads=1,
                n_batch_threads=2,
                min_frac=0.4,
@@ -26,6 +27,7 @@ class DataQueue(DataContainer):
                            batch_size,
                            read_fnames_func,
                            decode_func,
+                           np_out,
                            shuffle,
                            name)
 
@@ -43,7 +45,7 @@ class DataQueue(DataContainer):
                        min_frac=min_frac,
                        maxsize=maxsize)
     self.batch_q_args = (self.idx_q,
-                         self._bsize
+                         self._bsize,
                          self._decode,
                          self.fnames)
 
@@ -59,6 +61,6 @@ class DataQueue(DataContainer):
 
 
   def done(self):
-    print self._stop_str.format(self._name)
+    print self._done_str.format(self._name)
     self.idx_q.done()
     self.batch_q.done()

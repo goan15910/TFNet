@@ -17,22 +17,23 @@ class CamVid(Dataset):
   """
   def __init__(self,
                root_dir,
-               use_sets):
+               use_sets,
+               use_q):
     # customize cfg here
     cfg = config
-    # no customize setting
+    cfg.datum_shapes = (None, [360, 480, 3], [360, 480, 1])
 
     # setup dataset skeleton
     Dataset.__init__(self,
                      root_dir,
                      cfg,
-                     use_sets)
+                     use_sets,
+                     use_q)
     # name
     self.name = 'CamVid'
 
     # batch-key
     self._batch_keys = ('clips', 'images', 'labels')
-    self._datum_shapes = (None, [360, 480, 3], [360, 480, 1])
 
     # fname-dict
     self.fname_dict = edict()
@@ -94,8 +95,21 @@ class CamVid(Dataset):
         clips.append(clip)
         image = cv2.imread(im)
         label = cv2.imread(la)[..., 0]
+        label = np.expand_dims(label, axis=-1)
         images.append(image)
         labels.append(label)
       return (clips, images, labels)
 
     return camvid_decode
+
+
+  def batch_shape(self, batch_dict, key):
+    if key == 'clips':
+      shapes = None
+    elif key == 'images':
+      images = batch_dict[key]
+      shapes = map(lambda x: x.shape, images)
+    elif key == 'labels':
+      labels = batch_dict[key]
+      shapes = map(lambda x: x.shape, labels)
+    return shapes

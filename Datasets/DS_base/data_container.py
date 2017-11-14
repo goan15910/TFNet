@@ -11,20 +11,22 @@ class DataContainer:
                batch_size,
                read_fnames_func,
                decode_func,
-               shuffle=False
+               np_out,
+               shuffle=False,
                name=''):
     # basics
     self._name = name
     self._fnames = read_fnames_func(filename)
     self._decode = decode_func(self._fnames)
     self._bsize = batch_size
+    self._np_out = np_out
     self._shuffle = shuffle
     self._epoch_steps = \
       int(np.ceil(batch_size / self.n_fname))
 
     # info str
-    self._start_str = 'Start loading {} data'
-    self._done_str = 'Stop loading {} data'
+    self._start_str = '{} data container job starts ...'
+    self._done_str = '{} data container job ends ...'
 
 
   @property

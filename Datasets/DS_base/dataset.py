@@ -22,13 +22,16 @@ class Dataset:
   def __init__(self,
                root_dir,
                cfg,
-               use_sets):
+               use_sets,
+               use_q=None):
     # Basic info
     self.name = None
     self.root_dir = root_dir
     self._batch_keys = None
-    self._datum_shape = None
+    self._batch_size = None
     self.cfg = cfg
+    if use_q is not None:
+      self.cfg.use_q = use_q
 
     # Train / val / test sets
     self._use_sets = use_sets
@@ -51,9 +54,9 @@ class Dataset:
 
   @property
   def datum_shapes(self):
-    if self._datum_shapes is None:
+    if self.cfg.datum_shapes is None:
       raise NotImplementedError
-    return self._datum_shapes
+    return self.cfg.datum_shapes
 
 
   @property
@@ -63,7 +66,17 @@ class Dataset:
 
   @property
   def batch_size(self):
-    return self.config.batch_size
+    if self._batch_size is None:
+      raise NotImplementedError
+    return self._batch_size
+
+
+  @property
+  def np_out(self):
+    if self.cfg.datum_shape is not None:
+      return True
+    else:
+      return False
 
 
   @property
@@ -87,10 +100,18 @@ class Dataset:
     return self._cls_colors
 
 
+  def batch_shape(self, batch):
+    raise NotImplementedError
+
+
   def epoch_steps(self, skey):
     """Steps to run through whole epoch"""
     self._check_set_key(skey)
     return self.dc[skey].epoch_steps
+
+
+  def set_batch_size(self, batch_size):
+    self._batch_size = batch_size
 
 
   def start(self):
@@ -98,7 +119,7 @@ class Dataset:
       # basic info
       self._check_skey(skey)
       if skey == SET.TRAIN:
-        shuffle = self.config.shuffle
+        shuffle = self.cfg.shuffle
       else:
         shuffle = False
       filename = self.fname_dict[skey]
@@ -110,10 +131,11 @@ class Dataset:
             self.batch_size,
             self._read_fnames,
             self._decode_func,
+            self.np_out,
             self.cfg.n_idx_threads,
             self.cfg.n_batch_threads,
             self.cfg.q_min_frac,
-            self.cfg.maxsize,
+            self.cfg.q_maxsize,
             shuffle=shuffle,
             name=skey)
       else:
@@ -122,6 +144,7 @@ class Dataset:
             self.batch_size,
             self._read_fnames,
             self._decode_func,
+            np_out=self.np_out,
             shuffle=shuffle,
             name=skey)
       self.dc[skey].start()

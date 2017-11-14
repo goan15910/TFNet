@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 
 from Networks.encoder_decoder import ENCODER_DECODER
-from Datasets.dataset import SET
+from Datasets.DS_base.dataset import SET
 from vizer import SummaryType
 
 
@@ -59,12 +59,13 @@ class SegNet_Template(ENCODER_DECODER):
                self.fed.labels,
                self.train_op]
 
-    for step in xrange(self.cfg.max_steps):
-      # Get feed_dict
+    while self.step < self.cfg.max_steps:
+      # step 
+      step = self.step
+
+      # Set feed_dict
       feed_dict = self._feed_dict(SET.TRAIN)
-      print feed_dict.keys()
-      print "images shape {}".format(feed_dict[self.fed.images])
-      print "labels shape {}".format(feed_dict[self.fed.labels])
+      feed_dict[self.fed.phase_train] = True
 
       # Optimization
       out_list, t_cost = self._forward(

@@ -66,9 +66,11 @@ class Eval_hist:
       self.clean()
     N = preds.shape[0]
     for i in xrange(N):
-      labels = labels[i].flatten()
-      preds = preds[i].argmax(2).flatten()
-      self.hist += fast_hist(labels, preds)
+      flat_label = labels[i].flatten()
+      flat_pred = preds[i].argmax(2).flatten()
+      self.hist += self._fast_hist(
+                       flat_label,
+                       flat_pred)
 
 
   def printout(self):
@@ -76,19 +78,19 @@ class Eval_hist:
     self._validate()
     print ('accuracy = %f' % self.acc)
     print ('mean IU  = %f' % self.mean_iu)
-    for ii in xrange(self.n_cls):
-        if self.my_pos[ii] == 0:
+    for i in xrange(self.n_cls):
+        if self.my_pos[i] == 0:
           acc = 0.0
         else:
-          acc = self.true_pos[ii] / self.my_pos[ii]
-        print("    class # %d accuracy = %f "%(ii, acc))
+          acc = self.true_pos[i] / self.my_pos[i]
+        print("    class # %d accuracy = %f "%(i, acc))
 
 
   def _fast_hist(self, a, b):
     k = (a >= 0) & (a < self.n_cls)
     flat_hist = np.bincount(
-                    n_cls * a[k].astype(int) + b[k],
-                    minlength=n_cls**2)
+                    self.n_cls * a[k].astype(int) + b[k],
+                    minlength=self.n_cls**2)
     return flat_hist.reshape(self.shape)
 
 

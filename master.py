@@ -12,7 +12,7 @@ from Models import model_table as m_table
 from initer import Initer
 from vizer import Vizer
 
-from Datasets.dataset import SET
+from Datasets.DS_base.dataset import SET
 
 
 MODE = edict()
@@ -30,8 +30,8 @@ class Master:
     self.save_dir = FLAGS.save_dir
     self.n_threads = FLAGS.threads
     self.pretrained = FLAGS.pretrained
-    # TODO
-    #self.test_ckpt = FLAGS.test_ckpt
+    self.use_q = FLAGS.queue
+    self.ckpt = FLAGS.ckpt
 
     self.m_class = m_table[FLAGS.model]
     self.d_class = d_table[FLAGS.dataset]
@@ -48,11 +48,14 @@ class Master:
     if self.mode == MODE.TRAIN:
       print "Start training ..."
       self.model.build()
+      self.model.run_init(ckpt=self.ckpt)
+      self.model.merge_all()
       self.model.train()
     elif self.mode == MODE.TEST:
       print "Start testing ..."
-      # TODO: restore ckpt first
       self.model.build()
+      self.model.run_init(ckpt=self.ckpt)
+      self.model.merge_all()
       self.model.eval(SET.TEST)
 
     # Done
@@ -68,7 +71,8 @@ class Master:
       use_sets = (SET.TEST)
     self.dataset = self.d_class(
                        self.dataset_dir,
-                       use_sets)
+                       use_sets,
+                       self.use_q)
 
     # initer
     self.initer = Initer(self.pretrained)
