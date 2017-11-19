@@ -22,7 +22,7 @@ class DataContainer:
     self._np_out = np_out
     self._shuffle = shuffle
     self._epoch_steps = \
-      int(np.ceil(batch_size / self.n_fname))
+      int(np.ceil(float(self.n_fname) / batch_size))
 
     # info str
     self._start_str = '{} data container job starts ...'

@@ -104,9 +104,15 @@ class Dataset:
     raise NotImplementedError
 
 
+  def n_examples(self, skey):
+    """Number of examples in the set"""
+    self._check_skey(skey)
+    return self.dc[skey].n_fname
+
+
   def epoch_steps(self, skey):
     """Steps to run through whole epoch"""
-    self._check_set_key(skey)
+    self._check_skey(skey)
     return self.dc[skey].epoch_steps
 
 

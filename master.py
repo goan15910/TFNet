@@ -24,6 +24,11 @@ class Master:
   """Master coordinates all sub-components"""
   def __init__(self,
                FLAGS):
+    # Some checking
+    self._check_mode(FLAGS.mode)
+    self._check_exists(FLAGS.dataset_dir)
+    self._check_exists(FLAGS.save_dir)
+
     # Setup path & flags from FLAGS
     self.mode = FLAGS.mode
     self.dataset_dir = FLAGS.dataset_dir
@@ -33,13 +38,9 @@ class Master:
     self.use_q = FLAGS.queue
     self.ckpt = FLAGS.ckpt
 
+    # initiate classes
     self.m_class = m_table[FLAGS.model]
     self.d_class = d_table[FLAGS.dataset]
-
-    # Some checking
-    self._check_mode(self.mode)
-    self._check_exists(self.dataset_dir)
-    self._check_exists(self.save_dir)
 
 
   def run(self):
@@ -49,13 +50,11 @@ class Master:
       print "Start training ..."
       self.model.build()
       self.model.run_init(ckpt=self.ckpt)
-      self.model.merge_all()
       self.model.train()
     elif self.mode == MODE.TEST:
       print "Start testing ..."
       self.model.build()
       self.model.run_init(ckpt=self.ckpt)
-      self.model.merge_all()
       self.model.eval(SET.TEST)
 
     # Done

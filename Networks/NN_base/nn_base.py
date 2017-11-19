@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 from easydict import EasyDict as edict
 
+from Datasets.DS_base.dataset import SET
 from utils import join_keys_mapping
 from eval_hist import Eval_hist
 
@@ -41,9 +42,13 @@ class NN_BASE:
       if ('__' not in k) and k is not 'VARIABLES':
         self.GKeys[k] = v
     self.GKeys.BATCH_NORM = 'batch_norm'
+    self.GKeys.EVAL_SUMMARIES = 'eval_summaries'
 
     # config
     self.cfg = cfg
+
+    # save_dir
+    self.save_dir = os.path.join(save_dir, 'model.ckpt')
 
     # Session
     sess_config = tf.ConfigProto()
@@ -77,6 +82,11 @@ class NN_BASE:
 
 
   @property
+  def max_steps(self):
+    return self.cfg.max_steps
+
+
+  @property
   def conv2d_init(self):
     return self.initer.conv2d_init
 
@@ -99,10 +109,6 @@ class NN_BASE:
       self.saver.restore(self.sess, ckpt)
 
 
-  def merge_all(self):
-    self.vizer.merge_all()
-
-
   def done(self):
     self.dataset.done()
     self.sess.close()
@@ -111,8 +117,14 @@ class NN_BASE:
   def _feed_dict(self, skey):
     """Feed batch dict into class dict fed"""
     batch_dict = self.dataset.batch(skey)
-    return join_keys_mapping(self.fed,
-                             batch_dict)
+    feed_dict = join_keys_mapping(
+                    self.fed,
+                    batch_dict)
+    if skey == SET.TRAIN:
+      feed_dict[self.fed.phase_train] = True
+    else:
+      feed_dict[self.fed.phase_train] = False
+    return feed_dict
 
 
   def _forward(self,
